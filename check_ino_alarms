@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################
-#Nagios Innovaphone   Plugin #
+#Nagios Innovaphone Plugin   #
 #Thomas Schewe	   		     #
 #Black and White Admins      #
 #IT aus Leidenschaft	     #
@@ -23,21 +23,60 @@
 #2      CRITICAL
 #3      UNKNOWN
 
+#Chlog
+version="0.2"
+versiondate="30.03.2018"
+
+#Funktionen
+debug()
+{
+    fett=`tput bold`
+    reset=`tput sgr0`
+    if [ "$1" == "off" ]
+    then
+        set +x
+        echo "${fett}--------------------DEBUG=OFF-------------------${reset}"
+    elif [ "$1" == "on" ] || [ "$1" = "" ]
+    then
+        echo "${fett}--------------------DEBUG=ON--------------------${reset}"
+        set -x
+    else
+        echo "Error. Wrong Input: ${0} ${1}. Use \"debug on\" or \"debug off\" to enter or leave debug mode"
+        exit
+    fi
+}
+
+#Hilfe anzeigen
+helpme()
+{
+	echo ""
+    echo "Usage:"
+    echo -e "\t check_ino_alarms -h \$HOSTNAME -u \$USER -p \$PASSWORD"
+	echo ""
+	exit 3
+}
+
+#Info
+defdone()
+{
+	echo "Script Version: v${version} $versiondate" 
+}
+
 STATE_OK=0
 STATE_WARNING=1
 STATE_CRITICAL=2
 STATE_UNKNOWN=3
 
-while getopts H:U:P: OPT
+while getopts h:u:p: OPT
 do
   case $OPT in
-    H) 
+    h) 
 		HOSTNAME="$OPTARG" 
 	;;
-    U) 
+    u) 
 		USER="$OPTARG"
 	;;
-    P)
+    p)
 		PASSWORD="$OPTARG" 
 	;;
    esac
@@ -48,10 +87,34 @@ done
 #echo $USER
 #echo $PASSWORD
 
+if [ "$HOSTNAME" == "" ]
+then
+	echo ""
+	echo "Error. Hostname is missing"
+	helpme
+fi
+
+if [ "$USER" == "" ]
+then
+	echo ""
+	echo "Error. User is missing"
+	helpme
+fi
+
+if [ "$PASSWORD" == "" ]
+then
+	echo ""
+	echo "Error. Password is missing"
+	helpme
+fi
+
+#HTTP Abfrage
 xmlinput=$(curl -s --user ${USER}:${PASSWORD} http://${HOSTNAME}/LOG0/FAULT/mod_cmd.xml?cmd=xml-alarms&xsl=alarm_log.xsl)
 
+#Alarmtags filtern
 alarm=$(echo $xmlinput |  sed '/^<alarms><\/alarms>$/d')
 
+#Alarme suageben
 if [ "$alarm" == "" ]
 then
 	exit $STATE_OK
