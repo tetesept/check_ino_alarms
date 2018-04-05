@@ -1,0 +1,64 @@
+#!/bin/bash
+##############################
+#Nagios Innovaphone   Plugin #
+#Thomas Schewe	   		     #
+#Black and White Admins      #
+#IT aus Leidenschaft	     #
+##############################
+
+#
+#!!!NOTE!!!
+#If you like this Skrit and find it helpful
+#Please feel free to donate to keep this Project free
+#Thanks in advance for your help
+#Paypal mail@thomas-schewe.de
+#
+
+#Plugin zur Ueberwachung der Innovaphoe Alarme über Nagios oder Icinga/Icinga2
+
+#Statuscodes:
+#Code   Status
+#0      OK
+#1      WARNING
+#2      CRITICAL
+#3      UNKNOWN
+
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+while getopts H:U:P: OPT
+do
+  case $OPT in
+    H) 
+		HOSTNAME="$OPTARG" 
+	;;
+    U) 
+		USER="$OPTARG"
+	;;
+    P)
+		PASSWORD="$OPTARG" 
+	;;
+   esac
+done
+
+#Debug
+#echo $HOSTNAME
+#echo $USER
+#echo $PASSWORD
+
+xmlinput=$(curl -s --user ${USER}:${PASSWORD} http://${HOSTNAME}/LOG0/FAULT/mod_cmd.xml?cmd=xml-alarms&xsl=alarm_log.xsl)
+
+alarm=$(echo $xmlinput |  sed '/^<alarms><\/alarms>$/d')
+
+if [ "$alarm" == "" ]
+then
+	exit $STATE_OK
+else
+	echo $alarm | sed -n -e 's/.*<text>\(.*\)<\/text>.*/\1/p'
+	echo $alarm
+	exit $STATE_CRITICAL
+fi   
+
+exit $STATE_UNKNOWN
